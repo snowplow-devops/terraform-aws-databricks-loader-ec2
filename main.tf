@@ -356,7 +356,7 @@ locals {
     db_http_path               = var.deltalake_http_path
     db_auth_token              = var.deltalake_auth_token
     temp_credentials_role_arn  = aws_iam_role.sts_credentials_role.arn
-    shredder_output            = var.databricks_aws_s3_transformed_stage_url
+    transformer_output         = var.databricks_aws_s3_transformed_stage_url
     sp_tracking_enabled        = var.sp_tracking_enabled
     sp_tracking_app_id         = var.sp_tracking_app_id
     sp_tracking_collector_url  = var.sp_tracking_collector_url
