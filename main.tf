@@ -165,7 +165,7 @@ resource "aws_iam_instance_profile" "instance_profile" {
 
 resource "aws_iam_role" "sts_credentials_role" {
   name        = "${var.name}-sts-credentials"
-  description = "Allows the Databricks to access the S3 buckets to perform loading"
+  description = "Allows the Databricks Loader to access the S3 buckets to perform loading"
   tags        = local.tags
 
   permissions_boundary = var.iam_permissions_boundary
