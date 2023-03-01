@@ -27,6 +27,7 @@ locals {
     "arn:aws:s3:::${trimsuffix(trimprefix(var.databricks_aws_s3_transformed_stage_url, "s3://"), "/")}/*"
   ]
 
+  # TODO: This is not used?
   sts_credentials_s3_buckets = concat(
     local.sts_credentials_s3_monitoring_buckets,
     local.sts_credentials_s3_transformed_buckets
@@ -41,7 +42,7 @@ data "aws_caller_identity" "current" {}
 
 module "telemetry" {
   source  = "snowplow-devops/telemetry/snowplow"
-  version = "0.3.0"
+  version = "0.4.0"
 
   count = var.telemetry_enabled ? 1 : 0
 
@@ -52,27 +53,6 @@ module "telemetry" {
   app_version      = local.app_version
   module_name      = local.module_name
   module_version   = local.module_version
-}
-
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-ebs"]
-  }
-
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["amazon"]
 }
 
 # --- CloudWatch: Logging
@@ -316,6 +296,13 @@ resource "aws_security_group_rule" "egress_udp_statsd" {
 
 # --- EC2: Auto-scaling group & Launch Configurations
 
+module "instance_type_metrics" {
+  source  = "snowplow-devops/ec2-instance-type-metrics/aws"
+  version = "0.1.2"
+
+  instance_type = var.instance_type
+}
+
 locals {
   resolvers_raw = concat(var.default_iglu_resolvers, var.custom_iglu_resolvers)
 
@@ -394,6 +381,15 @@ locals {
     retry_queue_size          = var.retry_queue_size
     retry_queue_max_attempt   = var.retry_queue_max_attempt
     retry_queue_interval      = var.retry_queue_interval
+
+    telemetry_disable          = !var.telemetry_enabled
+    telemetry_collector_uri    = join("", module.telemetry.*.collector_uri)
+    telemetry_collector_port   = 443
+    telemetry_secure           = true
+    telemetry_user_provided_id = var.user_provided_id
+    telemetry_auto_gen_id      = join("", module.telemetry.*.auto_generated_id)
+    telemetry_module_name      = local.module_name
+    telemetry_module_version   = local.module_version
   })
 
   user_data = templatefile("${path.module}/templates/user-data.sh.tmpl", {
@@ -405,11 +401,15 @@ locals {
 
     cloudwatch_logs_enabled   = var.cloudwatch_logs_enabled
     cloudwatch_log_group_name = local.cloudwatch_log_group_name
+
+    container_memory = "${module.instance_type_metrics.memory_application_mb}m"
+    java_opts        = var.java_opts
   })
 }
 
 module "service" {
-  source = "../terraform-aws-service-ec2"
+  source  = "snowplow-devops/service-ec2/aws"
+  version = "0.1.0"
 
   user_supplied_script = local.user_data
   name                 = var.name
@@ -422,7 +422,9 @@ module "service" {
   associate_public_ip_address = var.associate_public_ip_address
   security_groups             = [aws_security_group.sg.id]
 
-  min_size   = var.min_size
-  max_size   = var.max_size
+  min_size   = 1
+  max_size   = 1
   subnet_ids = var.subnet_ids
+
+  enable_auto_scaling = false
 }

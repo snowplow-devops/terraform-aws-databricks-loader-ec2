@@ -22,7 +22,7 @@ variable "subnet_ids" {
 variable "instance_type" {
   description = "The instance type to use"
   type        = string
-  default     = "t3.micro"
+  default     = "t3a.micro"
 }
 
 variable "associate_public_ip_address" {
@@ -40,18 +40,6 @@ variable "ssh_ip_allowlist" {
   description = "The list of CIDR ranges to allow SSH traffic from"
   type        = list(any)
   default     = ["0.0.0.0/0"]
-}
-
-variable "min_size" {
-  description = "The minimum number of servers in this server-group"
-  default     = 1
-  type        = number
-}
-
-variable "max_size" {
-  description = "The maximum number of servers in this server-group"
-  default     = 2
-  type        = number
 }
 
 variable "amazon_linux_2_ami_id" {
@@ -78,6 +66,12 @@ variable "cloudwatch_logs_retention_days" {
   type        = number
 }
 
+variable "java_opts" {
+  description = "Custom JAVA Options"
+  default     = "-Dorg.slf4j.simpleLogger.defaultLogLevel=info -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=75"
+  type        = string
+}
+
 # --- Configuration options
 
 variable "sqs_queue_name" {
@@ -89,12 +83,6 @@ variable "folder_monitoring_enabled" {
   description = "Whether folder monitoring should be activated or not"
   default     = false
   type        = bool
-}
-
-variable "max_error" {
-  description = "A table copy statement will skip an input file when the number of errors in it exceeds the specified number"
-  default     = -1
-  type        = number
 }
 
 variable "sp_tracking_enabled" {
@@ -125,6 +113,7 @@ variable "sentry_dsn" {
   description = "DSN for Sentry instance"
   default     = ""
   type        = string
+  sensitive   = true
 }
 
 variable "statsd_enabled" {
