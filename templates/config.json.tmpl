@@ -10,9 +10,13 @@
 
   # Warehouse connection details
   "storage" : {
+    # The destination DB
     "type": "databricks",
+
     # Hostname of Databricks cluster
     "host": "${db_host}",
+    # Databricks Authentication Token
+    "password": "${db_auth_token}",
     # Optional. Override the Databricks default catalog, e.g. with a Unity catalog name.
     "catalog": "${db_catalog}",
     # DB schema
@@ -21,8 +25,6 @@
     "port": ${db_port},
     # Http Path of Databricks cluster
     "httpPath": "${db_http_path}",
-    # Databricks Authentication Token
-    "password": "${db_auth_token}"
     # User agent name for Databricks connection. Optional, default value "snowplow-rdbloader-oss"
     "userAgent": "snowplow-rdbloader-oss"
 
@@ -50,16 +52,7 @@
     # Periodic schedules to stop loading, e.g. for Redshift maintenance window
     # Any amount of schedules is supported, but recommended to not overlap them
     # The schedule works with machine's local timezone (and UTC is recommended)
-    "noOperation": [
-      {
-        # Human-readable name of the no-op window
-        "name": "Maintenance window",
-        # Cron expression with second granularity
-        "when": "0 0 12 * * ?",
-        # For how long the loader should be paused
-        "duration": "1 hour"
-      }
-    ],
+    "noOperation": [],
     # Loader runs periodic OPTIMIZE statements to prevent growing number of files behind delta tables.
     "optimizeEvents": "0 0 0 ? * *",
     "optimizeManifest": "0 0 5 ? * *"
@@ -126,10 +119,14 @@
       "staging": "${folder_monitoring_staging}",
       # How often to check
       "period": "${folder_monitoring_period}",
+      # Specifies since when folder monitoring will check
       "since": "${folder_monitoring_since}",
+      # Specifies until when folder monitoring will check
       "until": "${folder_monitoring_until}",
       # Path to transformer archive (must be same as Transformer's `output.path`)
-      "transformerOutput": "${transformer_output}"
+      "transformerOutput": "${folder_monitoring_transformer_output}"
+      # How many times the check can fail before generating an alarm instead of warning
+      "failBeforeAlarm": 3
     }
 %{ endif ~}
 

@@ -347,25 +347,18 @@ variable "deltalake_auth_token" {
 }
 
 variable "databricks_aws_s3_bucket_name" {
-  description = "AWS S3 nucket name"
+  description = "AWS bucket name where data to load is stored"
   type        = string
-  default     = ""
-}
-
-variable "databricks_aws_s3_transformed_stage_url" {
-  description = "AWS bucket url of transformed stage"
-  type        = string
-  default     = ""
 }
 
 variable "databricks_aws_s3_folder_monitoring_stage_url" {
-  description = "AWS bucket url of folder monitoring"
+  description = "AWS bucket URL of folder monitoring stage - must be within 'snowflake_aws_s3_bucket_name' (NOTE: must be set if 'folder_monitoring_enabled' is true)"
   type        = string
   default     = ""
 }
 
-variable "sts_credentials_bucket_name_list" {
-  type        = list(string)
-  default     = []
-  description = "The list of S3 Buckets to allow the STS role to access"
+variable "databricks_aws_s3_folder_monitoring_transformer_output_stage_url" {
+  description = "AWS bucket URL of transformer output stage - must be within 'databricks_aws_s3_bucket_name'  (NOTE: must be set if 'folder_monitoring_enabled' is true)"
+  type        = string
+  default     = ""
 }

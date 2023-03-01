@@ -15,6 +15,7 @@ sudo docker run \
   --name loader \
   --restart always \
   --network host \
+  --memory=${container_memory} \
 %{ if cloudwatch_logs_enabled ~}
   --log-driver awslogs \
   --log-opt awslogs-group=${cloudwatch_log_group_name} \
