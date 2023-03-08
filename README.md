@@ -4,75 +4,6 @@
 
 A Terraform module which deploys the Snowplow Databricks Loader on an EC2 node.
 
-The following *outputs* can be used as input variables of the [Quickstart repo](https://github.com/snowplow/quickstart-examples) example Databricks tfvars in `aws/pipeline`.
-
-* The *JDBC connection details*.
-* The *loader access token*.
-* The *schema name*.
-* The *catalog name*.
-
-## Requirements
-
-* Access to your Databricks workspace console, with permissions to create a cluster and execute SQL.
-
-## Step 1: Create a cluster
-
-This is the *"RDB Loader cluster"*. The cluster spec described below should be sufficient for a monthly event volume of up to 10 million events. If your event volume is greater then you may need to increase the size fo the cluster.
-
-### Setup via Databricks console
-
-Create a new cluster, following the [Databricks documentation](https://docs.databricks.com/clusters/create.html), with the following settings:
-
-* single node cluster
-* "smallest" size node type
-* auto-terminate after 30 minutes.
-
-### Advanced cluster configurations (optional)
-
-You might want to configure cluster-level permissions, by following [the Databricks instructions on cluster access control](https://docs.databricks.com/security/access-control/cluster-acl.html).  Snowplow's RDB Loader must be able to restart the cluster if it is terminated.
-
-If you use AWS Glue Data Catalog as your metastore, [follow these Databricks instructions](https://docs.databricks.com/data/metastores/aws-glue-metastore.html) for the relevant spark configurations.  You will need to set `spark.databricks.hive.metastore.glueCatalog.enabled true` and `spark.hadoop.hive.metastore.glue.catalogid <aws-account-id-for-glue-catalog>` in the spark configuration.
-
-You can configure your cluster with [an instance profile](https://docs.databricks.com/administration-guide/cloud-configurations/aws/instance-profiles.html) if it needs extra permissions to access resources.  For example, if the S3 bucket holding the delta lake is in a different AWS account.
-
-## Step 2: Note the JDBC connection details for the cluster
-
-1. In the Databricks UI, click on "Compute" in the sidebar.
-2. Click on the *RDB Loader cluster* and navigate to "Advanced options".
-3. Click on the "JDBC/ODBC" tab.
-4. Note down the JDBC connection URL - specifically the `host`, the `port` and the `http_path`.
-
-These are the *JDBC connection details*.
-
-## Step 3: Create access token for the RDB Loader
-
-**Note**: The access token must not have a specified lifetime. Otherwise, RDB Loader will stop working when the token expires.
-
-1. Navigate to the user settings in your Databricks workspace.  For Databricks hosted on AWS, the "Settings" link is in the lower left corner in the side panel.  For Databricks hosted on Azure, "User Settings" is an option in the drop-down menu in the top right corner.
-2. Go to the "Access Tokens" tab.
-3. Click the "Generate New Token" button.
-4. Optionally enter a description (comment). Leave the expiration period empty.
-5. Click the "Generate" button.
-6. Copy the generated token and store in a secure location.
-
-This is the *loader access token*.
-
-## Step 4: Create catalog and schema
-
-The SQL to create the required events table for Snowplow data is below.
-
-You can change the name of the schema to be used (the default is `snowplow`) but do not change the name of the `events` table.
-
-The `events` table will be created by RDB Loader when it starts up along with a `manifest` table to record what/when a folder was loaded.
-
-```sql
--- USE CATALOG <custom_unity_catalog>; -- Uncomment if your want to use a custom Unity catalog and replace with your own value.
-
-CREATE SCHEMA IF NOT EXISTS snowplow
--- LOCATION s3://<custom_location>/ -- Uncomment if you want tables created by Snowplow to be located in a non-default bucket or directory.
-;
-```
-
 ## Telemetry
 
 This module by default collects and forwards telemetry information to Snowplow to understand how our applications are being used.  No identifying information about your sub-account or account fingerprints are ever forwarded to us - it is very simple information about what modules and applications are deployed and active.
@@ -91,11 +22,122 @@ For details on what information is collected please see this module: <https://gi
 
 Databricks Loader loads transformed events from S3 bucket to Databricks.
 
-Events are initially transformed to wide row format by transformer. After transformation is finished, transformer sends SQS message to given SQS queue. SQS message contains pieces of information related with transformed events. These are the S3 location of transformed events and the keys of the custom schemas found in the transformed events. Databricks Loader gets messages from common SQS queue and loads transformed events to Databricks. The events which are loaded to Databricks are the ones which where indicated by the processed SQS message.
+Events are initially transformed to `widerow` format by transformer. After transformation is finished, transformer sends SQS message to given SQS queue. SQS message contains pieces of information related with transformed events. These are the S3 location of transformed events and the keys of the custom schemas found in the transformed events. Databricks Loader gets messages from common SQS queue and loads transformed events to Databricks. The events which are loaded to Databricks are the ones which where indicated by the processed SQS message.
 
-The `deltalake_*` inputs are meant to be obtained from Databricks setup as described [in the QuickStart examples](https://github.com/snowplow/quickstart-examples/terraform/aws/databricks/).
+To obtain the `deltalake_*` inputs you will need to follow the steps below.  You will need to have access to your Databricks workspace console, with permissions to create a cluster and execute SQL.
+
+### Step 1: Create a cluster
+
+This is the *"RDB Loader cluster"*. The cluster spec described below should be sufficient for a monthly event volume of up to 10 million events. If your event volume is greater then you may need to increase the size fo the cluster.
+
+#### Setup via Databricks console
+
+Create a new cluster, following the [Databricks documentation](https://docs.databricks.com/clusters/create.html), with the following settings:
+
+* single node cluster
+* "smallest" size node type
+* auto-terminate after 30 minutes.
+
+#### Advanced cluster configurations (optional)
+
+You might want to configure cluster-level permissions, by following [the Databricks instructions on cluster access control](https://docs.databricks.com/security/access-control/cluster-acl.html).  Snowplow's RDB Loader must be able to restart the cluster if it is terminated.
+
+If you use AWS Glue Data Catalog as your metastore, [follow these Databricks instructions](https://docs.databricks.com/data/metastores/aws-glue-metastore.html) for the relevant spark configurations.  You will need to set `spark.databricks.hive.metastore.glueCatalog.enabled true` and `spark.hadoop.hive.metastore.glue.catalogid <aws-account-id-for-glue-catalog>` in the spark configuration.
+
+You can configure your cluster with [an instance profile](https://docs.databricks.com/administration-guide/cloud-configurations/aws/instance-profiles.html) if it needs extra permissions to access resources.  For example, if the S3 bucket holding the delta lake is in a different AWS account.
+
+### Step 2: Note the JDBC connection details for the cluster
+
+1. In the Databricks UI, click on "Compute" in the sidebar.
+2. Click on the *RDB Loader cluster* and navigate to "Advanced options".
+3. Click on the "JDBC/ODBC" tab.
+4. Note down the JDBC connection URL - specifically the `host`, the `port` and the `http_path`.
+
+These are the *JDBC connection details*.
+
+### Step 3: Create access token for the RDB Loader
+
+**Note**: The access token must not have a specified lifetime. Otherwise, RDB Loader will stop working when the token expires.
+
+1. Navigate to the user settings in your Databricks workspace.  For Databricks hosted on AWS, the "Settings" link is in the lower left corner in the side panel.  For Databricks hosted on Azure, "User Settings" is an option in the drop-down menu in the top right corner.
+2. Go to the "Access Tokens" tab.
+3. Click the "Generate New Token" button.
+4. Optionally enter a description (comment). Leave the expiration period empty.
+5. Click the "Generate" button.
+6. Copy the generated token and store in a secure location.
+
+This is the *loader access token*.
+
+### Step 4: Create catalog and schema
+
+The SQL to create the required events table for Snowplow data is below.
+
+You can change the name of the schema to be used (the default is `snowplow`) but do not change the name of the `events` table.  The default catalog is called `hive_metastore` and is what you should use in the loader unless you specify your own.
+
+The `events` table will be created by RDB Loader when it starts up along with a `manifest` table to record what/when a folder was loaded.
+
+```sql
+-- USE CATALOG <custom_unity_catalog>; -- Uncomment if your want to use a custom Unity catalog and replace with your own value.
+
+CREATE SCHEMA IF NOT EXISTS snowplow
+-- LOCATION s3://<custom_location>/ -- Uncomment if you want tables created by Snowplow to be located in a non-default bucket or directory.
+;
+```
+
+### Step 5: Deploy the loader
 
 Duration settings such as `folder_monitoring_period` or `retry_period` should be given in the [documented duration format][duration-doc].
+
+See example below:
+
+```hcl
+# Note: This should be the same bucket that is used by the transformer to produce data to load
+module "s3_pipeline_bucket" {
+  source = "snowplow-devops/s3-bucket/aws"
+
+  bucket_name = "your-bucket-name"
+}
+
+# Note: This should be the same queue that is passed to the transformer to produce data to load
+resource "aws_sqs_queue" "db_message_queue" {
+  content_based_deduplication = true
+  kms_master_key_id           = "alias/aws/sqs"
+  name                        = "db-loader.fifo"
+  fifo_queue                  = true
+}
+
+module "db_loader" {
+  source = "snowplow-devops/databricks-loader-ec2/aws"
+
+  name       = "db-loader-server"
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+
+  sqs_queue_name = aws_sqs_queue.db_message_queue.name
+
+  deltalake_catalog             = "<CATALOG>"
+  deltalake_schema              = "<SCHEMA>"
+  deltalake_host                = "<HOST>"
+  deltalake_port                = "<PORT>"
+  deltalake_http_path           = "<HTTP_PATH>"
+  deltalake_auth_token          = "<AUTH_TOKEN>"
+  databricks_aws_s3_bucket_name = module.s3_pipeline_bucket.id
+
+  ssh_key_name     = "your-key-name"
+  ssh_ip_allowlist = ["0.0.0.0/0"]
+
+  # Linking in the custom Iglu Server here
+  custom_iglu_resolvers = [
+    {
+      name            = "Iglu Server"
+      priority        = 0
+      uri             = "http://your-iglu-server-endpoint/api"
+      api_key         = var.iglu_super_api_key
+      vendor_prefixes = []
+    }
+  ]
+}
+```
 
 ## Requirements
 
@@ -115,7 +157,7 @@ Duration settings such as `folder_monitoring_period` or `retry_period` should be
 | Name | Source | Version |
 |------|--------|---------|
 | <a name="module_instance_type_metrics"></a> [instance\_type\_metrics](#module\_instance\_type\_metrics) | snowplow-devops/ec2-instance-type-metrics/aws | 0.1.2 |
-| <a name="module_service"></a> [service](#module\_service) | snowplow-devops/service-ec2/aws | 0.1.0 |
+| <a name="module_service"></a> [service](#module\_service) | snowplow-devops/service-ec2/aws | 0.1.1 |
 | <a name="module_telemetry"></a> [telemetry](#module\_telemetry) | snowplow-devops/telemetry/snowplow | 0.4.0 |
 
 ## Resources
@@ -155,11 +197,11 @@ Duration settings such as `folder_monitoring_period` or `retry_period` should be
 | <a name="input_cloudwatch_logs_enabled"></a> [cloudwatch\_logs\_enabled](#input\_cloudwatch\_logs\_enabled) | Whether application logs should be reported to CloudWatch | `bool` | `true` | no |
 | <a name="input_cloudwatch_logs_retention_days"></a> [cloudwatch\_logs\_retention\_days](#input\_cloudwatch\_logs\_retention\_days) | The length of time in days to retain logs for | `number` | `7` | no |
 | <a name="input_custom_iglu_resolvers"></a> [custom\_iglu\_resolvers](#input\_custom\_iglu\_resolvers) | The custom Iglu Resolvers that will be used by Stream Shredder | <pre>list(object({<br>    name            = string<br>    priority        = number<br>    uri             = string<br>    api_key         = string<br>    vendor_prefixes = list(string)<br>  }))</pre> | `[]` | no |
-| <a name="input_databricks_aws_s3_folder_monitoring_stage_url"></a> [databricks\_aws\_s3\_folder\_monitoring\_stage\_url](#input\_databricks\_aws\_s3\_folder\_monitoring\_stage\_url) | AWS bucket URL of folder monitoring stage - must be within 'snowflake\_aws\_s3\_bucket\_name' (NOTE: must be set if 'folder\_monitoring\_enabled' is true) | `string` | `""` | no |
+| <a name="input_databricks_aws_s3_folder_monitoring_stage_url"></a> [databricks\_aws\_s3\_folder\_monitoring\_stage\_url](#input\_databricks\_aws\_s3\_folder\_monitoring\_stage\_url) | AWS bucket URL of folder monitoring stage - must be within 'databricks\_aws\_s3\_bucket\_name' (NOTE: must be set if 'folder\_monitoring\_enabled' is true) | `string` | `""` | no |
 | <a name="input_databricks_aws_s3_folder_monitoring_transformer_output_stage_url"></a> [databricks\_aws\_s3\_folder\_monitoring\_transformer\_output\_stage\_url](#input\_databricks\_aws\_s3\_folder\_monitoring\_transformer\_output\_stage\_url) | AWS bucket URL of transformer output stage - must be within 'databricks\_aws\_s3\_bucket\_name'  (NOTE: must be set if 'folder\_monitoring\_enabled' is true) | `string` | `""` | no |
 | <a name="input_default_iglu_resolvers"></a> [default\_iglu\_resolvers](#input\_default\_iglu\_resolvers) | The default Iglu Resolvers that will be used by Stream Shredder | <pre>list(object({<br>    name            = string<br>    priority        = number<br>    uri             = string<br>    api_key         = string<br>    vendor_prefixes = list(string)<br>  }))</pre> | <pre>[<br>  {<br>    "api_key": "",<br>    "name": "Iglu Central",<br>    "priority": 10,<br>    "uri": "http://iglucentral.com",<br>    "vendor_prefixes": []<br>  },<br>  {<br>    "api_key": "",<br>    "name": "Iglu Central - Mirror 01",<br>    "priority": 20,<br>    "uri": "http://mirror01.iglucentral.com",<br>    "vendor_prefixes": []<br>  }<br>]</pre> | no |
 | <a name="input_deltalake_auth_token"></a> [deltalake\_auth\_token](#input\_deltalake\_auth\_token) | Databricks deltalake auth token | `string` | `""` | no |
-| <a name="input_deltalake_catalog"></a> [deltalake\_catalog](#input\_deltalake\_catalog) | Databricks deltalake catalog | `string` | `""` | no |
+| <a name="input_deltalake_catalog"></a> [deltalake\_catalog](#input\_deltalake\_catalog) | Databricks deltalake catalog | `string` | `"hive_metastore"` | no |
 | <a name="input_deltalake_host"></a> [deltalake\_host](#input\_deltalake\_host) | Databricks deltalake host | `string` | `""` | no |
 | <a name="input_deltalake_http_path"></a> [deltalake\_http\_path](#input\_deltalake\_http\_path) | Databricks deltalake http path | `string` | `""` | no |
 | <a name="input_deltalake_port"></a> [deltalake\_port](#input\_deltalake\_port) | Databricks deltalake port | `string` | `""` | no |

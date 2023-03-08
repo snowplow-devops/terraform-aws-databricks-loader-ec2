@@ -177,14 +177,14 @@ resource "aws_iam_policy" "sts_credentials_policy" {
     Version = "2012-10-17",
     Statement = [
       {
-        "Effect" : "Allow",
-        "Action" : [
+        Effect = "Allow",
+        Action = [
           "s3:ListBucket",
           "s3:GetBucketLocation",
           "s3:GetObject",
           "s3:GetObjectVersion"
         ],
-        "Resource" : [
+        Resource = [
           "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}",
           "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/",
           "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/*"

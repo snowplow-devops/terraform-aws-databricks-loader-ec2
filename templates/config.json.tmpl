@@ -49,7 +49,7 @@
   },
 
   "schedules": {
-    # Periodic schedules to stop loading, e.g. for Redshift maintenance window
+    # Periodic schedules to stop loading, e.g. for Databricks maintenance window
     # Any amount of schedules is supported, but recommended to not overlap them
     # The schedule works with machine's local timezone (and UTC is recommended)
     "noOperation": [],
@@ -115,7 +115,7 @@
     # Optional, configuration for periodic unloaded/corrupted folders checks
     "folders": {
       # Path where Loader could store auxiliary logs
-      # Loader should be able to write here, Redshift should be able to load from here
+      # Loader should be able to write here, Databricks should be able to load from here
       "staging": "${folder_monitoring_staging}",
       # How often to check
       "period": "${folder_monitoring_period}",

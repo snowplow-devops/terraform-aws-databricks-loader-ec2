@@ -313,7 +313,7 @@ variable "user_provided_id" {
 variable "deltalake_catalog" {
   description = "Databricks deltalake catalog"
   type        = string
-  default     = ""
+  default     = "hive_metastore"
 }
 
 variable "deltalake_schema" {
@@ -344,6 +344,7 @@ variable "deltalake_auth_token" {
   description = "Databricks deltalake auth token"
   type        = string
   default     = ""
+  sensitive   = true
 }
 
 variable "databricks_aws_s3_bucket_name" {
@@ -352,7 +353,7 @@ variable "databricks_aws_s3_bucket_name" {
 }
 
 variable "databricks_aws_s3_folder_monitoring_stage_url" {
-  description = "AWS bucket URL of folder monitoring stage - must be within 'snowflake_aws_s3_bucket_name' (NOTE: must be set if 'folder_monitoring_enabled' is true)"
+  description = "AWS bucket URL of folder monitoring stage - must be within 'databricks_aws_s3_bucket_name' (NOTE: must be set if 'folder_monitoring_enabled' is true)"
   type        = string
   default     = ""
 }
