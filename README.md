@@ -106,6 +106,37 @@ resource "aws_sqs_queue" "db_message_queue" {
   fifo_queue                  = true
 }
 
+module "transformer_wrp" {
+  source  = "snowplow-devops/transformer-kinesis-ec2/aws"
+
+  name       = "transformer-server-wrp"
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+
+  stream_name             = module.enriched_stream.name
+  s3_bucket_name          = module.s3_pipeline_bucket.id
+  s3_bucket_object_prefix = "transformed/good/widerow/parquet"
+  window_period_min       = 1
+  sqs_queue_name          = aws_sqs_queue.db_message_queue.name
+
+  transformation_type = "widerow"
+  widerow_file_format = "parquet"
+
+  ssh_key_name     = "your-key-name"
+  ssh_ip_allowlist = ["0.0.0.0/0"]
+
+  # Linking in the custom Iglu Server here
+  custom_iglu_resolvers = [
+    {
+      name            = "Iglu Server"
+      priority        = 0
+      uri             = "http://your-iglu-server-endpoint/api"
+      api_key         = var.iglu_super_api_key
+      vendor_prefixes = []
+    }
+  ]
+}
+
 module "db_loader" {
   source = "snowplow-devops/databricks-loader-ec2/aws"
 
@@ -175,6 +206,7 @@ module "db_loader" {
 | [aws_security_group.sg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group_rule.egress_tcp_443](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_security_group_rule.egress_tcp_80](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.egress_tcp_databricks](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_security_group_rule.egress_udp_123](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_security_group_rule.egress_udp_statsd](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_security_group_rule.ingress_tcp_22](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
@@ -187,6 +219,10 @@ module "db_loader" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_databricks_aws_s3_bucket_name"></a> [databricks\_aws\_s3\_bucket\_name](#input\_databricks\_aws\_s3\_bucket\_name) | AWS bucket name where data to load is stored | `string` | n/a | yes |
+| <a name="input_deltalake_auth_token"></a> [deltalake\_auth\_token](#input\_deltalake\_auth\_token) | Databricks deltalake auth token | `string` | n/a | yes |
+| <a name="input_deltalake_host"></a> [deltalake\_host](#input\_deltalake\_host) | Databricks deltalake host | `string` | n/a | yes |
+| <a name="input_deltalake_http_path"></a> [deltalake\_http\_path](#input\_deltalake\_http\_path) | Databricks deltalake http path | `string` | n/a | yes |
+| <a name="input_deltalake_schema"></a> [deltalake\_schema](#input\_deltalake\_schema) | Databricks deltalake schema | `string` | n/a | yes |
 | <a name="input_name"></a> [name](#input\_name) | A name which will be prepended to the resources created | `string` | n/a | yes |
 | <a name="input_sqs_queue_name"></a> [sqs\_queue\_name](#input\_sqs\_queue\_name) | SQS queue name | `string` | n/a | yes |
 | <a name="input_ssh_key_name"></a> [ssh\_key\_name](#input\_ssh\_key\_name) | The name of the SSH key-pair to attach to all EC2 nodes deployed | `string` | n/a | yes |
@@ -200,12 +236,8 @@ module "db_loader" {
 | <a name="input_databricks_aws_s3_folder_monitoring_stage_url"></a> [databricks\_aws\_s3\_folder\_monitoring\_stage\_url](#input\_databricks\_aws\_s3\_folder\_monitoring\_stage\_url) | AWS bucket URL of folder monitoring stage - must be within 'databricks\_aws\_s3\_bucket\_name' (NOTE: must be set if 'folder\_monitoring\_enabled' is true) | `string` | `""` | no |
 | <a name="input_databricks_aws_s3_folder_monitoring_transformer_output_stage_url"></a> [databricks\_aws\_s3\_folder\_monitoring\_transformer\_output\_stage\_url](#input\_databricks\_aws\_s3\_folder\_monitoring\_transformer\_output\_stage\_url) | AWS bucket URL of transformer output stage - must be within 'databricks\_aws\_s3\_bucket\_name'  (NOTE: must be set if 'folder\_monitoring\_enabled' is true) | `string` | `""` | no |
 | <a name="input_default_iglu_resolvers"></a> [default\_iglu\_resolvers](#input\_default\_iglu\_resolvers) | The default Iglu Resolvers that will be used by Stream Shredder | <pre>list(object({<br>    name            = string<br>    priority        = number<br>    uri             = string<br>    api_key         = string<br>    vendor_prefixes = list(string)<br>  }))</pre> | <pre>[<br>  {<br>    "api_key": "",<br>    "name": "Iglu Central",<br>    "priority": 10,<br>    "uri": "http://iglucentral.com",<br>    "vendor_prefixes": []<br>  },<br>  {<br>    "api_key": "",<br>    "name": "Iglu Central - Mirror 01",<br>    "priority": 20,<br>    "uri": "http://mirror01.iglucentral.com",<br>    "vendor_prefixes": []<br>  }<br>]</pre> | no |
-| <a name="input_deltalake_auth_token"></a> [deltalake\_auth\_token](#input\_deltalake\_auth\_token) | Databricks deltalake auth token | `string` | `""` | no |
 | <a name="input_deltalake_catalog"></a> [deltalake\_catalog](#input\_deltalake\_catalog) | Databricks deltalake catalog | `string` | `"hive_metastore"` | no |
-| <a name="input_deltalake_host"></a> [deltalake\_host](#input\_deltalake\_host) | Databricks deltalake host | `string` | `""` | no |
-| <a name="input_deltalake_http_path"></a> [deltalake\_http\_path](#input\_deltalake\_http\_path) | Databricks deltalake http path | `string` | `""` | no |
-| <a name="input_deltalake_port"></a> [deltalake\_port](#input\_deltalake\_port) | Databricks deltalake port | `string` | `""` | no |
-| <a name="input_deltalake_schema"></a> [deltalake\_schema](#input\_deltalake\_schema) | Databricks deltalake schema | `string` | `""` | no |
+| <a name="input_deltalake_port"></a> [deltalake\_port](#input\_deltalake\_port) | Databricks deltalake port | `number` | `443` | no |
 | <a name="input_folder_monitoring_enabled"></a> [folder\_monitoring\_enabled](#input\_folder\_monitoring\_enabled) | Whether folder monitoring should be activated or not | `bool` | `false` | no |
 | <a name="input_folder_monitoring_period"></a> [folder\_monitoring\_period](#input\_folder\_monitoring\_period) | How often to folder should be checked by folder monitoring | `string` | `"8 hours"` | no |
 | <a name="input_folder_monitoring_since"></a> [folder\_monitoring\_since](#input\_folder\_monitoring\_since) | Specifies since when folder monitoring will check | `string` | `"14 days"` | no |
