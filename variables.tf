@@ -319,31 +319,27 @@ variable "deltalake_catalog" {
 variable "deltalake_schema" {
   description = "Databricks deltalake schema"
   type        = string
-  default     = ""
 }
 
 variable "deltalake_host" {
   description = "Databricks deltalake host"
   type        = string
-  default     = ""
 }
 
 variable "deltalake_port" {
   description = "Databricks deltalake port"
-  type        = string
-  default     = ""
+  type        = number
+  default     = 443
 }
 
 variable "deltalake_http_path" {
   description = "Databricks deltalake http path"
   type        = string
-  default     = ""
 }
 
 variable "deltalake_auth_token" {
   description = "Databricks deltalake auth token"
   type        = string
-  default     = ""
   sensitive   = true
 }
 

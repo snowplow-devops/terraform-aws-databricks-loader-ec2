@@ -3,7 +3,7 @@ locals {
   module_version = "0.1.0"
 
   app_name    = "rdb-loader-databricks"
-  app_version = "5.3.1"
+  app_version = "5.3.2"
 
   local_tags = {
     Name           = var.name
@@ -229,6 +229,17 @@ resource "aws_security_group_rule" "egress_tcp_443" {
   type              = "egress"
   from_port         = 443
   to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.sg.id
+}
+
+resource "aws_security_group_rule" "egress_tcp_databricks" {
+  count = var.deltalake_port != 443 ? 1 : 0
+
+  type              = "egress"
+  from_port         = var.deltalake_port
+  to_port           = var.deltalake_port
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.sg.id
