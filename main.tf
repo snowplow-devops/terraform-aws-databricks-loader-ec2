@@ -3,7 +3,7 @@ locals {
   module_version = "0.1.1"
 
   app_name    = "rdb-loader-databricks"
-  app_version = "5.3.2"
+  app_version = "5.6.0"
 
   local_tags = {
     Name           = var.name
