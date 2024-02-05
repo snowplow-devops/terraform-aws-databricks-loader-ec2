@@ -1,6 +1,6 @@
 locals {
   module_name    = "databricks-loader-ec2"
-  module_version = "0.1.3"
+  module_version = "0.2.0"
 
   app_name    = "rdb-loader-databricks"
   app_version = var.app_version
