@@ -3,7 +3,7 @@ locals {
   module_version = "0.1.3"
 
   app_name    = "rdb-loader-databricks"
-  app_version = "5.6.0"
+  app_version = var.app_version
 
   local_tags = {
     Name           = var.name
@@ -26,7 +26,7 @@ data "aws_caller_identity" "current" {}
 
 module "telemetry" {
   source  = "snowplow-devops/telemetry/snowplow"
-  version = "0.4.0"
+  version = "0.5.0"
 
   count = var.telemetry_enabled ? 1 : 0
 
@@ -365,7 +365,9 @@ locals {
   })
 
   user_data = templatefile("${path.module}/templates/user-data.sh.tmpl", {
-    config_b64        = base64encode(local.config)
+    accept_limited_use_license = var.accept_limited_use_license
+
+    config_b64        = var.config_override_b64 == "" ? base64encode(local.config) : var.config_override_b64
     iglu_resolver_b64 = base64encode(local.iglu_resolver)
     version           = local.app_version
 
