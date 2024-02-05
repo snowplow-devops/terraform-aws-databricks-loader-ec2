@@ -1,6 +1,29 @@
+variable "accept_limited_use_license" {
+  description = "Acceptance of the SLULA terms (https://docs.snowplow.io/limited-use-license-1.0/)"
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = var.accept_limited_use_license
+    error_message = "Please accept the terms of the Snowplow Limited Use License Agreement to proceed."
+  }
+}
+
 variable "name" {
   description = "A name which will be prepended to the resources created"
   type        = string
+}
+
+variable "app_version" {
+  description = "Version of rdb loader databricks"
+  type        = string
+  default     = "5.6.0"
+}
+
+variable "config_override_b64" {
+  description = "App config uploaded as a base64 encoded blob. This variable facilitates dev flow, if config is incorrect this can break the deployment."
+  type        = string
+  default     = ""
 }
 
 variable "iam_permissions_boundary" {
@@ -68,7 +91,7 @@ variable "cloudwatch_logs_retention_days" {
 
 variable "java_opts" {
   description = "Custom JAVA Options"
-  default     = "-Dorg.slf4j.simpleLogger.defaultLogLevel=info -XX:MinRAMPercentage=50 -XX:MaxRAMPercentage=75"
+  default     = "-XX:InitialRAMPercentage=75 -XX:MaxRAMPercentage=75"
   type        = string
 }
 
