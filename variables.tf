@@ -382,3 +382,11 @@ variable "databricks_aws_s3_folder_monitoring_transformer_output_stage_url" {
   type        = string
   default     = ""
 }
+
+# --- Image Repositories
+
+variable "private_ecr_registry" {
+  description = "The URL of an ECR registry that the sub-account has access to (e.g. '000000000000.dkr.ecr.cn-north-1.amazonaws.com.cn/')"
+  type        = string
+  default     = ""
+}

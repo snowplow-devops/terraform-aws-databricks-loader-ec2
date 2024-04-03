@@ -24,6 +24,25 @@ locals {
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
+locals {
+  is_aws_global = replace(data.aws_region.current.name, "cn-", "") == data.aws_region.current.name
+  iam_partition = local.is_aws_global ? "aws" : "aws-cn"
+
+  is_private_ecr_registry = var.private_ecr_registry != ""
+  private_ecr_registry_statement = [{
+    Action = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer"
+    ]
+    Effect = "Allow"
+    Resource = [
+      "*"
+    ]
+  }]
+  private_ecr_registry_statement_final = local.is_private_ecr_registry ? local.private_ecr_registry_statement : []
+}
+
 module "telemetry" {
   source  = "snowplow-devops/telemetry/snowplow"
   version = "0.5.0"
@@ -79,61 +98,64 @@ resource "aws_iam_policy" "iam_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "s3:ListBucket",
-          "s3:PutObject",
-          "s3:GetObject"
-        ],
-        Resource = [
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/",
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/*"
-        ]
-      },
-      {
-        Effect = "Allow",
-        Action = ["s3:GetObject"],
-        Resource = [
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/*/shredding_complete.json"
-        ]
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "sqs:DeleteMessage",
-          "sqs:GetQueueUrl",
-          "sqs:ListQueues",
-          "sqs:ChangeMessageVisibility",
-          "sqs:ReceiveMessage",
-          "sqs:SendMessage"
-        ],
-        Resource = [
-          "arn:aws:sqs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"
-        ]
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "logs:PutLogEvents",
-          "logs:CreateLogStream",
-          "logs:DescribeLogStreams"
-        ],
-        Resource = [
-          "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.cloudwatch_log_group_name}:*"
-        ]
-      },
-      {
-        Effect = "Allow",
-        Action = [
-          "sts:AssumeRole"
-        ],
-        Resource = [
-          aws_iam_role.sts_credentials_role.arn
-        ]
-      }
-    ]
+    Statement = concat(
+      local.private_ecr_registry_statement_final,
+      [
+        {
+          Effect = "Allow",
+          Action = [
+            "s3:ListBucket",
+            "s3:PutObject",
+            "s3:GetObject"
+          ],
+          Resource = [
+            "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}/",
+            "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}/*"
+          ]
+        },
+        {
+          Effect = "Allow",
+          Action = ["s3:GetObject"],
+          Resource = [
+            "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}/*/shredding_complete.json"
+          ]
+        },
+        {
+          Effect = "Allow",
+          Action = [
+            "sqs:DeleteMessage",
+            "sqs:GetQueueUrl",
+            "sqs:ListQueues",
+            "sqs:ChangeMessageVisibility",
+            "sqs:ReceiveMessage",
+            "sqs:SendMessage"
+          ],
+          Resource = [
+            "arn:${local.iam_partition}:sqs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${var.sqs_queue_name}"
+          ]
+        },
+        {
+          Effect = "Allow",
+          Action = [
+            "logs:PutLogEvents",
+            "logs:CreateLogStream",
+            "logs:DescribeLogStreams"
+          ],
+          Resource = [
+            "arn:${local.iam_partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.cloudwatch_log_group_name}:*"
+          ]
+        },
+        {
+          Effect = "Allow",
+          Action = [
+            "sts:AssumeRole"
+          ],
+          Resource = [
+            aws_iam_role.sts_credentials_role.arn
+          ]
+        }
+      ]
+    )
   })
 }
 
@@ -185,9 +207,9 @@ resource "aws_iam_policy" "sts_credentials_policy" {
           "s3:GetObjectVersion"
         ],
         Resource = [
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}",
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/",
-          "arn:aws:s3:::${var.databricks_aws_s3_bucket_name}/*"
+          "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}",
+          "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}/",
+          "arn:${local.iam_partition}:s3:::${var.databricks_aws_s3_bucket_name}/*"
         ]
       },
     ]
@@ -378,6 +400,10 @@ locals {
 
     container_memory = "${module.instance_type_metrics.memory_application_mb}m"
     java_opts        = var.java_opts
+
+    is_private_ecr_registry = local.is_private_ecr_registry
+    private_ecr_registry    = var.private_ecr_registry
+    region                  = data.aws_region.current.name
   })
 }
 
