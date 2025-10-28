@@ -66,7 +66,7 @@ variable "ssh_ip_allowlist" {
 }
 
 variable "amazon_linux_2023_ami_id" {
-  description = "The AMI ID to use which must be based of of Amazon Linux 2; by default the latest community version is used"
+  description = "The AMI ID to use which must be based of of Amazon Linux 2023; by default the latest community version is used"
   default     = ""
   type        = string
 }
