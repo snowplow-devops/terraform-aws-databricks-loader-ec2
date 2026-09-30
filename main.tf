@@ -1,6 +1,6 @@
 locals {
   module_name    = "databricks-loader-ec2"
-  module_version = "0.3.1"
+  module_version = "0.3.2"
 
   app_name    = "rdb-loader-databricks"
   app_version = var.app_version
@@ -409,7 +409,7 @@ locals {
 
 module "service" {
   source  = "snowplow-devops/service-ec2/aws"
-  version = "0.3.4"
+  version = "0.3.5"
 
   user_supplied_script = local.user_data
   name                 = var.name
